@@ -1,17 +1,21 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "NEXT_PUBLIC_VERCEL_TOOLBAR_HOST=\"http://localhost:3000\" next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "12.1.4",
-    "react": "18.0.0",
-    "react-dom": "18.0.0"
+    "@vercel/flags": "^2.3.0",
+    "@vercel/toolbar": "^0.1.14",
+    "next": "^14.2.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/react": "^18.2.79",
     "eslint": "8.12.0",
     "eslint-config-next": "12.1.4"
   }
