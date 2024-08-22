@@ -34,24 +34,48 @@ async function captureHelper(element: HTMLElement | Node): Promise<string> {
   // const style = captureStyle(element);
   // attributes.push(`style="${style.replaceAll('"', '\\"')}"`);
 
-  const children = await Promise.all(
-    Array.from(element.childNodes).map(captureHelper),
-  );
+  let children = (
+    await Promise.all(Array.from(element.childNodes).map(captureHelper))
+  ).join('');
 
-  return `<${tagName}${attributes.join(' ')}>${children.join('')}</${tagName}>`;
+  if (tagName === 'head') {
+    const colors = matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'background-color: black; color: white'
+      : 'background-color: white; color: black';
+
+    children = `<style>:where(:root){${colors}}</style>${children}`;
+  } else if (tagName === 'style') {
+    children = freezeMediaQueries(children);
+  }
+
+  return `<${tagName}${attributes.join(' ')}>${children}</${tagName}>`;
 }
 
 async function captureStylesheet(element: HTMLLinkElement): Promise<string> {
   try {
     const res = await fetch(element.getAttribute('href'));
     const text = await res.text();
-    return `<style>${text
+    return `<style>${freezeMediaQueries(text)
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')}</style>`;
   } catch (e) {
     console.log(e);
   }
   return '';
+}
+
+function freezeMediaQueries(css: string): string {
+  // Replace media queries to always or never match depending on whether they match
+  // while creating the snapshot
+  return css.replace(/@media\s*(\(.*?\))/gim, (_, query) => {
+    // TODO: handle complex media queries (e.g. and/or)
+    const { matches } = matchMedia(query);
+    // console.log({ query, matches });
+    if (matches) {
+      return '@media(min-width:0)';
+    }
+    return '@media(max-width:0)';
+  });
 }
 
 export function SnapshotCapture() {
