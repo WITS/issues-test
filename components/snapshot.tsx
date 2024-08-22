@@ -15,7 +15,7 @@ async function captureHelper(element: HTMLElement | Node): Promise<string> {
 
   const tagName = element.tagName.toLowerCase();
 
-  if (tagName === 'LINK' && element.getAttribute('rel') === 'stylesheet') {
+  if (tagName === 'link' && element.getAttribute('rel') === 'stylesheet') {
     return captureStylesheet(element as HTMLLinkElement);
   }
 
