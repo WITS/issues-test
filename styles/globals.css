@@ -18,3 +18,10 @@ a {
 .hidden {
   display: none;
 }
+
+@media (prefers-color-scheme: dark) {
+  html {
+    background: black;
+    color: white;
+  }
+}
