@@ -21,14 +21,31 @@ async function captureHelper(element: HTMLElement | Node): Promise<string> {
 
   if (HIDDEN_ELEMENTS.has(tagName)) return '';
 
+  let colorScheme = '';
+  if (tagName === 'html') {
+    colorScheme =
+      element.style.colorScheme ||
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  }
+
   const attributes: string[] = [''];
   for (const _attr of element.getAttributeNames()) {
     const attr = _attr.toLowerCase();
     // if (attr === 'style') continue;
     if (attr.startsWith('on')) continue;
 
-    const value = element.getAttribute(_attr);
+    let value = element.getAttribute(_attr);
+
+    if (attr === 'style' && colorScheme) {
+      value += `;color-scheme:${colorScheme}`;
+      colorScheme = '';
+    }
+
     attributes.push(`${_attr}="${value.replaceAll('"', '\\"')}"`);
+  }
+
+  if (colorScheme) {
+    attributes.push(`style="color-scheme:${colorScheme}"`);
   }
 
   // const style = captureStyle(element);
