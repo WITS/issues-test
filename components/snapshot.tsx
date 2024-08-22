@@ -2,53 +2,56 @@
 
 import { useState, useEffect } from 'react';
 
-function capture(): string {
-  return `<!DOCTYPE html>${captureHelper(document.documentElement)}`;
+async function capture(): Promise<string> {
+  return `<!DOCTYPE html>${await captureHelper(document.documentElement)}`;
 }
 
-const HIDDEN_ELEMENTS = new Set(['head', 'script', 'link']);
+const HIDDEN_ELEMENTS = new Set(['noscript', 'script', 'link']);
 
-function captureHelper(element: HTMLElement | Node): string {
+async function captureHelper(element: HTMLElement | Node): Promise<string> {
   if (!('tagName' in element)) {
     return element.textContent;
   }
 
   const tagName = element.tagName.toLowerCase();
 
+  if (tagName === 'LINK' && element.getAttribute('rel') === 'stylesheet') {
+    return captureStylesheet(element as HTMLLinkElement);
+  }
+
   if (HIDDEN_ELEMENTS.has(tagName)) return '';
 
-  const attributes: string[] = [];
+  const attributes: string[] = [''];
   for (const _attr of element.getAttributeNames()) {
     const attr = _attr.toLowerCase();
-    if (attr === 'style') continue;
+    // if (attr === 'style') continue;
     if (attr.startsWith('on')) continue;
 
     const value = element.getAttribute(_attr);
     attributes.push(`${_attr}="${value.replaceAll('"', '\\"')}"`);
   }
 
-  const style = captureStyle(element);
-  attributes.push(`style="${style.replaceAll('"', '\\"')}"`);
+  // const style = captureStyle(element);
+  // attributes.push(`style="${style.replaceAll('"', '\\"')}"`);
 
-  const children = Array.from(element.childNodes).map(captureHelper);
+  const children = await Promise.all(
+    Array.from(element.childNodes).map(captureHelper),
+  );
 
-  return `<${tagName} ${attributes.join(' ')}>${children.join(
-    '',
-  )}</${tagName}>`;
+  return `<${tagName}${attributes.join(' ')}>${children.join('')}</${tagName}>`;
 }
 
-function captureStyle(element: HTMLElement): string {
-  const style = getComputedStyle(element);
-
-  const props: string[] = [];
-  for (const [prop, value] of Object.entries(style)) {
-    if (!value) continue;
-    props.push(
-      `${prop.replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`)}:${value}`,
-    );
+async function captureStylesheet(element: HTMLLinkElement): Promise<string> {
+  try {
+    const res = await fetch(element.getAttribute('href'));
+    const text = await res.text();
+    return `<style>${text
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')}</style>`;
+  } catch (e) {
+    console.log(e);
   }
-
-  return props.join(';');
+  return '';
 }
 
 export function SnapshotCapture() {
@@ -60,10 +63,12 @@ export function SnapshotCapture() {
   useEffect(() => {
     if (!isCapturing) return;
 
-    setWidth(window.innerWidth);
-    setHeight(window.innerHeight);
-    setSnapshot(capture());
-    setIsCapturing(false);
+    (async () => {
+      setSnapshot(await capture());
+      setWidth(window.innerWidth);
+      setHeight(window.innerHeight);
+      setIsCapturing(false);
+    })();
   }, [isCapturing]);
 
   return (
