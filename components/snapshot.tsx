@@ -2,13 +2,32 @@
 
 import { useState, useEffect } from 'react';
 
+interface ScrollPosition {
+  x: number;
+  y: number;
+}
+
+// TODO: cache requests for inlining CSS/images
+interface CaptureCache {
+  scrollPositions: Map<HTMLElement, ScrollPosition>;
+}
+
+const createCache = (): CaptureCache => ({
+  scrollPositions: new Map(),
+});
+
 async function capture(): Promise<string> {
-  return `<!DOCTYPE html>${await captureHelper(document.documentElement)}`;
+  const cache = createCache();
+  const html = await captureHelper(document.documentElement, cache);
+  return `<!DOCTYPE html>${html}${createScrollScript(cache)}`;
 }
 
 const HIDDEN_ELEMENTS = new Set(['noscript', 'script', 'link']);
 
-async function captureHelper(element: HTMLElement | Node): Promise<string> {
+async function captureHelper(
+  element: HTMLElement | Node,
+  cache: CaptureCache,
+): Promise<string> {
   if (!('tagName' in element)) {
     return element.textContent;
   }
@@ -21,6 +40,19 @@ async function captureHelper(element: HTMLElement | Node): Promise<string> {
 
   if (HIDDEN_ELEMENTS.has(tagName)) return '';
 
+  let { scrollLeft, scrollTop } = element;
+  if (tagName === 'html') {
+    scrollLeft = window.scrollX;
+    scrollTop = window.scrollY;
+  }
+
+  if (scrollLeft || scrollTop) {
+    cache.scrollPositions.set(element, {
+      x: scrollLeft,
+      y: scrollTop,
+    });
+  }
+
   let colorScheme = '';
   if (tagName === 'html') {
     colorScheme =
@@ -31,7 +63,6 @@ async function captureHelper(element: HTMLElement | Node): Promise<string> {
   const attributes: string[] = [''];
   for (const _attr of element.getAttributeNames()) {
     const attr = _attr.toLowerCase();
-    // if (attr === 'style') continue;
     if (attr.startsWith('on')) continue;
 
     let value = element.getAttribute(_attr);
@@ -52,11 +83,10 @@ async function captureHelper(element: HTMLElement | Node): Promise<string> {
     attributes.push(`style="color-scheme:${colorScheme}"`);
   }
 
-  // const style = captureStyle(element);
-  // attributes.push(`style="${style.replaceAll('"', '\\"')}"`);
-
   let children = (
-    await Promise.all(Array.from(element.childNodes).map(captureHelper))
+    await Promise.all(
+      Array.from(element.childNodes).map((x) => captureHelper(x, cache)),
+    )
   ).join('');
 
   if (tagName === 'head') {
@@ -119,6 +149,34 @@ async function inlineImageSrc(src: string): Promise<string> {
   return src;
 }
 
+function createScrollScript(cache: CaptureCache): string {
+  const adjustments: string[] = [];
+  for (const [element, pos] of cache.scrollPositions.entries()) {
+    const sel: string[] = [];
+    for (let n = element; n; n = n.parentElement) {
+      if (n.parentElement) {
+        sel.unshift(
+          `>:nth-child(${Array.from(n.parentElement.children).indexOf(n)})`,
+        );
+      } else {
+        sel.unshift('html');
+      }
+    }
+
+    adjustments.push(
+      `${
+        sel.length === 1
+          ? 'window'
+          : `document.querySelector("${sel.join('')}")`
+      }?.scrollTo(${pos.x},${pos.y})`,
+    );
+  }
+
+  if (!adjustments.length) return '';
+
+  return `<script>${adjustments.join(';')}</script>`;
+}
+
 export function SnapshotCapture() {
   const [snapshot, setSnapshot] = useState<string | null>(null);
   const [width, setWidth] = useState(0);
@@ -147,39 +205,38 @@ export function SnapshotCapture() {
       >
         Capture Page
       </button>
-      <div
-        className="w-full max-w-md mx-auto"
-        style={isCapturing ? { display: 'none' } : undefined}
-      >
-        <header>
-          <h1>Snapshot Capture</h1>
-        </header>
-        <main>
-          <div className="flex flex-col items-center space-y-4">
-            {snapshot ? (
-              <div
-                style={{
-                  containerName: 'snapshot',
-                  containerType: 'inline-size',
-                  maxWidth: '60vw',
-                  aspectRatio: `${width} / ${height}`,
-                }}
-              >
-                <iframe
-                  srcDoc={snapshot}
+      {isCapturing ? null : (
+        <div className="w-full max-w-md mx-auto">
+          <header>
+            <h1>Snapshot Capture</h1>
+          </header>
+          <main>
+            <div className="flex flex-col items-center space-y-4">
+              {snapshot ? (
+                <div
                   style={{
-                    width,
-                    height,
-                    // transform: `scale(calc(100cqw / ${width}px))`,
-                    transform: 'scale(0.5)',
-                    border: '1px solid gray',
+                    containerName: 'snapshot',
+                    containerType: 'inline-size',
+                    maxWidth: '60vw',
+                    aspectRatio: `${width} / ${height}`,
                   }}
-                />
-              </div>
-            ) : null}
-          </div>
-        </main>
-      </div>
+                >
+                  <iframe
+                    srcDoc={snapshot}
+                    style={{
+                      width,
+                      height,
+                      // transform: `scale(calc(100cqw / ${width}px))`,
+                      transform: 'scale(0.5)',
+                      border: '1px solid gray',
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </main>
+        </div>
+      )}
     </>
   );
 }
