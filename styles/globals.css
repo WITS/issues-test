@@ -15,6 +15,12 @@ a {
   box-sizing: border-box;
 }
 
+.sticky {
+  position: sticky;
+  top: 1rem;
+  display: block;
+}
+
 .hidden {
   display: none;
 }

@@ -137,54 +137,49 @@ export function SnapshotCapture() {
   }, [isCapturing]);
 
   return (
-    <div
-      className="w-full max-w-md mx-auto"
-      style={isCapturing ? { display: 'none' } : undefined}
-    >
-      <header>
-        <h1>Snapshot Capture</h1>
-      </header>
-      <main>
-        <div className="flex flex-col items-center space-y-4">
-          {snapshot ? (
-            // <pre>{snapshot}</pre>
-            <div
-              style={{
-                containerName: 'snapshot',
-                containerType: 'inline-size',
-                maxWidth: '60vw',
-                aspectRatio: `${width} / ${height}`,
-              }}
-            >
-              <iframe
-                srcDoc={snapshot}
+    <>
+      <button
+        onClick={() => setIsCapturing(true)}
+        disabled={isCapturing}
+        className="w-full sticky"
+        style={isCapturing ? { display: 'none' } : undefined}
+        type="button"
+      >
+        Capture Page
+      </button>
+      <div
+        className="w-full max-w-md mx-auto"
+        style={isCapturing ? { display: 'none' } : undefined}
+      >
+        <header>
+          <h1>Snapshot Capture</h1>
+        </header>
+        <main>
+          <div className="flex flex-col items-center space-y-4">
+            {snapshot ? (
+              <div
                 style={{
-                  width,
-                  height,
-                  // transform: `scale(calc(100cqw / ${width}px))`,
-                  transform: 'scale(0.5)',
-                  border: '1px solid gray',
+                  containerName: 'snapshot',
+                  containerType: 'inline-size',
+                  maxWidth: '60vw',
+                  aspectRatio: `${width} / ${height}`,
                 }}
-              />
-            </div>
-          ) : (
-            <div className="w-full h-40 bg-muted rounded-lg flex items-center justify-center">
-              <p className="text-muted-foreground">
-                {isCapturing ? 'Capturing...' : 'No image captured'}
-              </p>
-            </div>
-          )}
-          <button
-            onClick={() => setIsCapturing(true)}
-            disabled={isCapturing}
-            className="w-full"
-            type="button"
-          >
-            {/* <Camera className="w-4 h-4 mr-2" /> */}
-            {isCapturing ? 'Capturing...' : 'Capture Tab'}
-          </button>
-        </div>
-      </main>
-    </div>
+              >
+                <iframe
+                  srcDoc={snapshot}
+                  style={{
+                    width,
+                    height,
+                    // transform: `scale(calc(100cqw / ${width}px))`,
+                    transform: 'scale(0.5)',
+                    border: '1px solid gray',
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
