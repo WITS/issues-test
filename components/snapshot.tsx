@@ -81,6 +81,9 @@ async function captureStylesheet(element: HTMLLinkElement): Promise<string> {
   return '';
 }
 
+const MEDIA_TRUE = '@media(min-width:0)';
+const MEDIA_FALSE = '@media(max-width:0)';
+
 function freezeMediaQueries(css: string): string {
   // Replace media queries to always or never match depending on whether they match
   // while creating the snapshot
@@ -89,9 +92,9 @@ function freezeMediaQueries(css: string): string {
     const { matches } = matchMedia(query);
     // console.log({ query, matches });
     if (matches) {
-      return '@media(min-width:0)';
+      return MEDIA_TRUE;
     }
-    return '@media(max-width:0)';
+    return MEDIA_FALSE;
   });
 }
 
