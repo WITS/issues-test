@@ -115,20 +115,30 @@ async function captureStylesheet(element: HTMLLinkElement): Promise<string> {
   return '';
 }
 
-const MEDIA_TRUE = '@media(min-width:0)';
-const MEDIA_FALSE = '@media(max-width:0)';
+const MEDIA_TRUE = '(min-width:0)';
+const MEDIA_FALSE = '(max-width:0)';
 
 function freezeMediaQueries(css: string): string {
   // Replace media queries to always or never match depending on whether they match
   // while creating the snapshot
-  return css.replace(/@media\s*(\(.*?\))/gim, (_, query) => {
-    // TODO: handle complex media queries (e.g. and/or)
-    const { matches } = matchMedia(query);
-    // console.log({ query, matches });
-    if (matches) {
-      return MEDIA_TRUE;
-    }
-    return MEDIA_FALSE;
+  return css.replace(/@media((?:.|\n)*?){/gim, (_, conditions) => {
+    // console.log({ conditions });
+    return `@media${conditions.replace(/\((?:.|\n)*?\)/gim, (query) => {
+      if (
+        query.includes('width') ||
+        query.includes('height') ||
+        query.includes('aspect-ratio')
+      ) {
+        return query;
+      }
+
+      const { matches } = matchMedia(query);
+      // console.log({ query, matches });
+      if (matches) {
+        return MEDIA_TRUE;
+      }
+      return MEDIA_FALSE;
+    })}{`;
   });
 }
 

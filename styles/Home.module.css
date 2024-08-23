@@ -65,7 +65,8 @@
     Bitstream Vera Sans Mono, Courier New, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
+@media screen and (min-height: 400px) and (prefers-color-scheme: dark),
+  screen and (min-width: 40px) and (prefers-color-scheme: dark) {
   .code {
     background: #1e1e1e;
   }
