@@ -41,6 +41,10 @@ async function captureHelper(element: HTMLElement | Node): Promise<string> {
       colorScheme = '';
     }
 
+    if (tagName === 'img' && attr === 'src') {
+      value = await inlineImageSrc(value);
+    }
+
     attributes.push(`${_attr}="${value.replaceAll('"', '\\"')}"`);
   }
 
@@ -96,6 +100,23 @@ function freezeMediaQueries(css: string): string {
     }
     return MEDIA_FALSE;
   });
+}
+
+async function inlineImageSrc(src: string): Promise<string> {
+  try {
+    const res = await fetch(src);
+    const blob = await res.blob();
+    const data = new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => resolve(reader.result as string));
+      reader.addEventListener('error', () => reject());
+      reader.readAsDataURL(blob);
+    });
+    return await data;
+  } catch (e) {
+    console.log(e);
+  }
+  return src;
 }
 
 export function SnapshotCapture() {
